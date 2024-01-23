@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import issueTokenController, { renewTokenController } from '../controllers/TokenControllers';
+import { issueTokenController, renewTokenController } from '../controllers/TokenControllers';
 import addUserController from '../controllers/addUserController';
 
 export const router = Router();
