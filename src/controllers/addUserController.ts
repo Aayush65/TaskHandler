@@ -6,13 +6,13 @@ import { encrypt } from '../utils/hash';
 
 export default async function addUserController(req: Request, res: Response) {
     try {
-        const { phno, pass } = req.body;
-        if ( !pass || typeof phno !== "number" || phno.toString().length !== 10 ) {
+        const { phone_number, pass } = req.body;
+        if ( !pass || typeof phone_number !== "number" || phone_number.toString().length !== 10 ) {
             badRequest(res);
             return;
         }
 
-        const existingUser = await UserModel.findOne({ phno });
+        const existingUser = await UserModel.findOne({ phone_number });
         if (existingUser) {
             badRequest(res);
             return;

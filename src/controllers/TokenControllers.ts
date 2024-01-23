@@ -10,14 +10,14 @@ interface jwtPayload {
     isAccessToken: boolean
 }
 
-export default async function issueTokenController(req: Request, res: Response) {
+export async function issueTokenController(req: Request, res: Response) {
     try {
-        const { phno, pass } = req.body;
-        if (!phno || !pass || typeof phno !== "number" || phno.toString().length !== 10) {
+        const { phone_number, pass } = req.body;
+        if (!phone_number || !pass || typeof phone_number !== "number" || phone_number.toString().length !== 10) {
             badRequest(res);
             return;
         }
-        const userData = await UserModel.findOne({phno});
+        const userData = await UserModel.findOne({phone_number});
         if (!userData || !await compare(pass, userData.pass as string)) {
             forbidden(res);
             return;
