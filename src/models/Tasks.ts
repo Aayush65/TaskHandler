@@ -8,7 +8,9 @@ const taskSchema = new Schema({
     title: String,
     desc: String,
     due_date: String,
+    user_id: String,
     
+    no_of_subtasks: Number,
     priority: Number,
     status: String,
 
