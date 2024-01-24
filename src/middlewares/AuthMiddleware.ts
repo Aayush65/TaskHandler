@@ -29,7 +29,7 @@ export default async function AuthMiddleWare(req: Request, res: Response, next: 
             return;
         }
 
-        res.locals.userId = decodedjwt._id;
+        res.locals.user_id = decodedjwt._id;
         next();
     } catch (err) {
         unauthAccess(res);
