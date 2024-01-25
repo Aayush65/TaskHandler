@@ -1,7 +1,19 @@
 import { Request, Response } from 'express';
-import { badRequest, created, serverError } from '../views';
+import { badRequest, created, notFound, serverError, statusOkay } from '../views';
 import TaskModel from '../models/Tasks';
+import { ObjectId } from 'mongodb';
 
+
+export async function getAllTasksController(req: Request, res: Response) {
+    try {
+        const { user_id } = res.locals;
+        const tasks = await TaskModel.find({ user_id, deleted_at: { $exists: false } });
+        statusOkay(res, tasks);
+
+    } catch(err) {
+        serverError(res, err)
+    }
+}
 
 export async function addTaskController(req: Request, res: Response) {
     try {
@@ -48,6 +60,63 @@ export async function addTaskController(req: Request, res: Response) {
 
         created(res, {taskStatus, message: "Task Added Successfully"});
 
+    } catch(err) {
+        serverError(res, err)
+    }
+}
+
+export async function updateTaskController(req: Request, res: Response) {
+    try {
+        const { _id, due_date, status } = req.body;
+        if ( !_id || !ObjectId.isValid(_id) ) {
+            badRequest(res);
+            return;
+        }
+        if (status && !["TODO", "DONE"].includes(status)) {
+            badRequest(res);
+            return;
+        }
+        if (due_date && (!new Date(due_date).getTime() || new Date(due_date).getTime() <= new Date().getTime()) ) {
+            badRequest(res);
+            return;
+        }
+
+        const { user_id } = res.locals;
+        let toUpdate = {}
+        if (due_date)
+            toUpdate = { due_date }
+        if  (status)
+            toUpdate = { ...toUpdate, status }
+
+        const response = await TaskModel.findOneAndUpdate( { _id, user_id }, { $set: { updated_at: new Date(), ...toUpdate }})
+        if (!response) {
+            notFound(res);
+            return;
+        }
+        statusOkay(res, { response, message: "Task updated successfully" });
+
+    } catch(err) {
+        serverError(res, err);
+    }
+}
+
+export async function deleteTasksController(req: Request, res: Response) {
+    try {
+        const { _id } = req.body; 
+        if (!ObjectId.isValid(_id)) {
+            badRequest(res);
+            return;
+        }
+        const { user_id } = res.locals;
+        const response = await TaskModel.findOneAndUpdate({_id, user_id }, { deleted_at: new Date() });
+        if (!response || response.deleted_at ) {
+            notFound(res);
+            return;
+        }
+
+        // delete all the subtasks of tasks
+
+        statusOkay(res, { response, message: "Task deleted successfully" });
     } catch(err) {
         serverError(res, err)
     }
