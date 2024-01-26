@@ -60,8 +60,9 @@ export async function addTaskController(req: Request, res: Response) {
 
         const status = "DONE";
         const no_of_subtasks = 0;
+        const completed_subtasks = 0;
 
-        const taskData = { title, desc, due_date, user_id, created_at, priority, status, no_of_subtasks }
+        const taskData = { title, desc, due_date, user_id, created_at, priority, status, no_of_subtasks, completed_subtasks }
         const newTask = new TaskModel(taskData);
         const taskStatus = await newTask.save();
 
@@ -99,7 +100,7 @@ export async function updateTaskController(req: Request, res: Response) {
         if  (status)
             toUpdate = { ...toUpdate, status }
 
-        const response = await TaskModel.findOneAndUpdate( { _id, user_id }, { $set: { updated_at: new Date(), ...toUpdate }})
+        const response = await TaskModel.findOneAndUpdate( { _id, user_id }, { $set: { updated_at: new Date(), ...toUpdate } }, { new: true })
         if (!response) {
             notFound(res);
             return;

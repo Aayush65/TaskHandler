@@ -11,6 +11,7 @@ const taskSchema = new Schema({
     user_id: String,
     
     no_of_subtasks: Number,
+    completed_subtasks: Number,
     priority: Number,
     status: String,
 
