@@ -2,7 +2,19 @@ import { Request, Response } from 'express';
 import { badRequest, created, notFound, serverError, statusOkay } from '../views';
 import SubTaskModel from '../models/SubTasks';
 import { ObjectId } from 'mongodb';
+import TaskModel from '../models/Tasks';
 
+
+const statusCondition = (change: number) => { return { 
+    $switch: {
+        branches: [
+            { case: { $eq: [ { $sum: ["$completed_subtasks",  change]}, "$no_of_subtasks"] }, then: "DONE"},
+            { case: { $gte: [{ $sum: ["$completed_subtasks",  change]}, 1] }, then: "IN_PROGRESS"},
+            { case: { $eq: [{ $sum: ["$completed_subtasks",  change]}, 0] }, then: "TODO"}
+        ],
+        default: "Unknown"
+    }
+}}
 
 export async function getAllSubTasksController(req: Request, res: Response) {
     try {
@@ -44,8 +56,13 @@ export async function addSubTaskController(req: Request, res: Response) {
         const created_at = currDate.getFullYear() + "-" + String(currDate.getMonth() + 1) + "-" + currDate.getDate();
         const status = 0;
 
-        const newTask = new SubTaskModel({ title, desc, task_id, user_id, status, created_at });
-        const subtaskStatus = await newTask.save();
+        const taskUpdate = await TaskModel.findOneAndUpdate({ _id: task_id, user_id }, [{ $inc: { no_of_subtasks: 1 }}]);
+        if (!taskUpdate) {
+            notFound(res);
+            return;
+        }
+        const newSubTask = new SubTaskModel({ title, desc, task_id, user_id, status, created_at });
+        const subtaskStatus = await newSubTask.save();
 
         created(res, {subtaskStatus, message: "Subtask Added Successfully"});
 
@@ -67,16 +84,25 @@ export async function updateSubTaskController(req: Request, res: Response) {
             throw new Error("User_id not present");
         }
 
-        let toUpdate = {}
-        if (status !== undefined)
-            toUpdate = { status }
+        const response = await SubTaskModel.findOneAndUpdate( { _id, user_id }, [{ $set: { 
+            updated_at: { $cond: [ { $ne: [status, "$status"] }, new Date(), "$updated_at"]}, status }}] );
 
-        const response = await SubTaskModel.findOneAndUpdate( { _id, user_id }, { $set: { updated_at: new Date(), ...toUpdate }}, { new: true })
         if (!response) {
             notFound(res);
             return;
         }
-        statusOkay(res, { response, message: "Subtask updated successfully" });
+        if (response.status === status){
+            statusOkay(res, { message: "Nothing to change" });
+            return;
+        }
+
+        await TaskModel.updateOne({ _id: response.task_id, user_id }, [{ $set: {
+            completed_subtasks: {
+                $cond: [ { $eq: [status, 1] }, { $add: ["$completed_subtasks",  1]}, { $add : ["$completed_subtasks", -1]} ]
+            },
+            status: statusCondition(status ? 1: -1),
+        }}]);
+        statusOkay(res, { message: "Subtask updated successfully" });
 
     } catch(err) {
         serverError(res, err);
@@ -99,6 +125,18 @@ export async function deleteSubTasksController(req: Request, res: Response) {
             notFound(res);
             return;
         }
+
+        await TaskModel.findOneAndUpdate({ _id: response.task_id, user_id }, [{ $inc: { no_of_subtasks: -1}, 
+            $set: {
+                completed_subtasks: {
+                    $cond: {
+                        if: { $eq: [response.status, 1] },
+                        then: { $add: ["$completed_subtasks", -1] },
+                        else: "$completed_subtasks" }
+                    },
+                status: statusCondition(response.status ? -1 : 1)
+        }}]);
+        
         statusOkay(res, { response, message: "Subtask deleted successfully" });
     } catch(err) {
         serverError(res, err)
