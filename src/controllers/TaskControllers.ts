@@ -2,11 +2,15 @@ import { Request, Response } from 'express';
 import { badRequest, created, notFound, serverError, statusOkay } from '../views';
 import TaskModel from '../models/Tasks';
 import { ObjectId } from 'mongodb';
+import SubTaskModel from '../models/SubTasks';
 
 
 export async function getAllTasksController(req: Request, res: Response) {
     try {
         const { user_id } = res.locals;
+        if ( !user_id || !ObjectId.isValid(user_id) ) {
+            throw new Error("User_id not present/valid");
+        }
         const tasks = await TaskModel.find({ user_id, deleted_at: { $exists: false } });
         statusOkay(res, tasks);
 
@@ -20,7 +24,10 @@ export async function addTaskController(req: Request, res: Response) {
         const { user_id } = res.locals;
         const { title, desc, due_date } = req.body;
         
-        if (!title || !desc || !due_date || !user_id) {
+        if ( !user_id || !ObjectId.isValid(user_id) ) {
+            throw new Error("User_id not present/valid");
+        }
+        if (!title || !desc || !due_date) {
             badRequest(res);
             return;
         }
@@ -68,7 +75,7 @@ export async function addTaskController(req: Request, res: Response) {
 export async function updateTaskController(req: Request, res: Response) {
     try {
         const { _id, due_date, status } = req.body;
-        if ( !_id || !ObjectId.isValid(_id) ) {
+        if ( !_id || !ObjectId.isValid(_id) || (!status && !due_date) ) {
             badRequest(res);
             return;
         }
@@ -82,6 +89,10 @@ export async function updateTaskController(req: Request, res: Response) {
         }
 
         const { user_id } = res.locals;
+        if ( !user_id || !ObjectId.isValid(user_id) ) {
+            throw new Error("User_id not present/valid");
+        }
+
         let toUpdate = {}
         if (due_date)
             toUpdate = { due_date }
@@ -108,6 +119,9 @@ export async function deleteTasksController(req: Request, res: Response) {
             return;
         }
         const { user_id } = res.locals;
+        if ( !user_id || !ObjectId.isValid(user_id) ) {
+            throw new Error("User_id not present/valid");
+        }
         const response = await TaskModel.findOneAndUpdate({_id, user_id }, { deleted_at: new Date() });
         if (!response || response.deleted_at ) {
             notFound(res);
@@ -115,6 +129,7 @@ export async function deleteTasksController(req: Request, res: Response) {
         }
 
         // delete all the subtasks of tasks
+        await SubTaskModel.updateMany({ task_id: _id, user_id }, { deleted_at: new Date() });
 
         statusOkay(res, { response, message: "Task deleted successfully" });
     } catch(err) {

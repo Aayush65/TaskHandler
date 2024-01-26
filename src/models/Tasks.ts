@@ -19,6 +19,6 @@ const taskSchema = new Schema({
     deleted_at: Date,
 });
 
-const TaskModel = mongoose.model("SubTask", taskSchema);
+const TaskModel = mongoose.model("Task", taskSchema);
 
 export default TaskModel;
