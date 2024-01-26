@@ -56,7 +56,7 @@ export async function addSubTaskController(req: Request, res: Response) {
         const created_at = currDate.getFullYear() + "-" + String(currDate.getMonth() + 1) + "-" + currDate.getDate();
         const status = 0;
 
-        const taskUpdate = await TaskModel.findOneAndUpdate({ _id: task_id, user_id }, [{ $inc: { no_of_subtasks: 1 }}]);
+        const taskUpdate = await TaskModel.findOneAndUpdate({ _id: task_id, user_id }, { $inc: { no_of_subtasks: 1 }});
         if (!taskUpdate) {
             notFound(res);
             return;
