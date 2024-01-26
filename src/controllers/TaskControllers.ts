@@ -41,7 +41,7 @@ export async function addTaskController(req: Request, res: Response) {
             return;
         }
         
-        const daysLeft = (dueDateTime - currTime) / (1000 * 60 * 60 * 24);
+        const daysLeft = Math.ceil((dueDateTime - currTime) / (1000 * 60 * 60 * 24));
         if (daysLeft < 0) {
             badRequest(res);
             return;
