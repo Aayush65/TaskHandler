@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { Request, Response } from 'express';
+import { addSubTaskController, deleteSubTasksController, getAllSubTasksController, updateSubTaskController } from '../controllers/SubTaskControllers';
 
 export const router = Router();
 
-router.get("/", (req: Request, res: Response) => res.send("Hello World!!"));
-router.post("/", (req: Request, res: Response) => res.send("Hello World!!"));
-router.put("/", (req: Request, res: Response) => res.send("Hello World!!"));
-router.delete("/", (req: Request, res: Response) => res.send("Hello World!!"));
+router.get("/", getAllSubTasksController);
+router.post("/", addSubTaskController);
+router.put("/", updateSubTaskController);
+router.delete("/", deleteSubTasksController);
