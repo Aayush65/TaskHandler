@@ -5,12 +5,12 @@ import { ObjectId } from 'mongodb';
 import TaskModel from '../models/Tasks';
 
 
-const statusCondition = (change: number) => { return { 
+const statusCondition = (change1: number, change2: number = 0) => { return { 
     $switch: {
         branches: [
-            { case: { $eq: [ { $sum: ["$completed_subtasks",  change]}, "$no_of_subtasks"] }, then: "DONE"},
-            { case: { $gte: [{ $sum: ["$completed_subtasks",  change]}, 1] }, then: "IN_PROGRESS"},
-            { case: { $eq: [{ $sum: ["$completed_subtasks",  change]}, 0] }, then: "TODO"}
+            { case: { $eq: [ { $sum: ["$completed_subtasks",  change1]}, { $sum: ["$no_of_subtasks",  change2]}] }, then: "DONE"},
+            { case: { $gte: [{ $sum: ["$completed_subtasks",  change1]}, 1] }, then: "IN_PROGRESS"},
+            { case: { $eq: [{ $sum: ["$completed_subtasks",  change1]}, 0] }, then: "TODO"}
         ],
         default: "Unknown"
     }
@@ -120,13 +120,14 @@ export async function deleteSubTasksController(req: Request, res: Response) {
         if ( !user_id || !ObjectId.isValid(user_id) ) {
             throw new Error("User_id not present");
         }
-        const response = await SubTaskModel.findOneAndUpdate({_id, user_id }, { deleted_at: new Date() });
+        const response = await SubTaskModel.findOneAndUpdate({_id, user_id, deleted_at: { $exists: false } }, { deleted_at: new Date() });
+
         if (!response || response.deleted_at ) {
             notFound(res);
             return;
         }
 
-        await TaskModel.findOneAndUpdate({ _id: response.task_id, user_id }, [{ $inc: { no_of_subtasks: -1}, 
+        await TaskModel.findOneAndUpdate({ _id: response.task_id, user_id }, [{ 
             $set: {
                 completed_subtasks: {
                     $cond: {
@@ -134,7 +135,8 @@ export async function deleteSubTasksController(req: Request, res: Response) {
                         then: { $add: ["$completed_subtasks", -1] },
                         else: "$completed_subtasks" }
                     },
-                status: statusCondition(response.status ? -1 : 1)
+                status: statusCondition(response.status ? -1 : 1, -1),
+                no_of_subtasks: { $add: ["$no_of_subtasks", -1] }
         }}]);
         
         statusOkay(res, { response, message: "Subtask deleted successfully" });

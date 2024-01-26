@@ -123,7 +123,7 @@ export async function deleteTasksController(req: Request, res: Response) {
         if ( !user_id || !ObjectId.isValid(user_id) ) {
             throw new Error("User_id not present/valid");
         }
-        const response = await TaskModel.findOneAndUpdate({_id, user_id }, { deleted_at: new Date() });
+        const response = await TaskModel.findOneAndUpdate({_id, user_id, deleted_at: { $exists: false } }, { deleted_at: new Date() });
         if (!response || response.deleted_at ) {
             notFound(res);
             return;
